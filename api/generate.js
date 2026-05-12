@@ -7,7 +7,7 @@ module.exports = async function handler(req, res) {
 
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  const { prompt, model, imageUrl } = req.method === "POST" ? req.body : req.query;
+  const { prompt, imageUrl } = req.method === "POST" ? req.body : req.query;
 
   if (!prompt || !imageUrl) {
     return res.status(400).json({
@@ -17,29 +17,37 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const response = await axios.get("https://fluxcdibai-1.onrender.com/generate", {
-      params: {
-        prompt,
-        model: model || "seedream v4 edit",
-        imageUrl
-      },
-      timeout: 120000
+    // Encode prompt for URL
+    const encodedPrompt = encodeURIComponent(prompt);
+    const encodedImage = encodeURIComponent(imageUrl);
+
+    // Try Pollinations image edit
+    const editUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?image=${encodedImage}&width=1024&height=1024&nologo=true&enhance=true`;
+
+    // Check if URL is reachable
+    const testRes = await axios.get(editUrl, {
+      responseType: "arraybuffer",
+      timeout: 90000,
+      headers: {
+        "User-Agent": "Mozilla/5.0"
+      }
     });
 
-    const resultUrl = response.data?.data?.imageResponseVo?.url;
-
-    if (!resultUrl) {
-      return res.status(500).json({ success: false, error: "No image URL in response" });
+    if (!testRes.data || testRes.data.byteLength < 1000) {
+      throw new Error("Empty image response");
     }
 
     return res.status(200).json({
       success: true,
       data: {
-        imageResponseVo: { url: resultUrl }
+        imageResponseVo: {
+          url: editUrl
+        }
       }
     });
 
   } catch (err) {
+    console.error("Error:", err.message);
     return res.status(500).json({
       success: false,
       error: err.message || "Unknown error"
