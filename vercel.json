@@ -1,15 +1,18 @@
 {
   "version": 2,
-  "name": "edit-rocky-api",
-  "functions": {
-    "api/generate.js": {
-      "maxDuration": 120
-    }
-  },
   "routes": [
     {
       "src": "/generate",
       "dest": "/api/generate.js"
+    },
+    {
+      "src": "/",
+      "dest": "/api/index.js"
     }
-  ]
+  ],
+  "functions": {
+    "api/generate.js": {
+      "maxDuration": 120
+    }
+  }
 }
