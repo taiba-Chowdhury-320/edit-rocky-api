@@ -17,54 +17,28 @@ module.exports = async function handler(req, res) {
   try {
     const decodedImage = decodeURIComponent(imageUrl);
     const decodedPrompt = decodeURIComponent(prompt);
+    const seed = Math.floor(Math.random() * 999999);
 
-    // Step 1: Download image as base64
-    const imgRes = await axios.get(decodedImage, {
+    // Pollinations with image2image mode
+    const encoded = encodeURIComponent(decodedPrompt);
+    const encodedImg = encodeURIComponent(decodedImage);
+
+    const resultUrl = `https://image.pollinations.ai/prompt/${encoded}?image=${encodedImg}&width=1024&height=1024&seed=${seed}&nologo=true&model=flux-pro`;
+
+    const imgRes = await axios.get(resultUrl, {
       responseType: "arraybuffer",
-      timeout: 30000,
+      timeout: 90000,
       headers: { "User-Agent": "Mozilla/5.0" }
     });
-    const b64 = Buffer.from(imgRes.data).toString("base64");
-    const mime = imgRes.headers["content-type"] || "image/jpeg";
-    const dataUrl = `data:${mime};base64,${b64}`;
 
-    // Step 2: Call Gradio Space (pix2pix)
-    const gradioRes = await axios.post(
-      "https://fffiloni-instruct-pix2pix.hf.space/run/predict",
-      {
-        fn_index: 0,
-        data: [
-          dataUrl,
-          decodedPrompt,
-          7,
-          1.5,
-          20,
-          null
-        ]
-      },
-      {
-        headers: { "Content-Type": "application/json" },
-        timeout: 120000
-      }
-    );
-
-    const output = gradioRes.data?.data?.[0];
-    if (!output) {
-      throw new Error("No output from Gradio");
+    if (!imgRes.data || imgRes.data.byteLength < 500) {
+      throw new Error("Empty image");
     }
-
-    // output is base64 data URL
-    const base64Data = output.replace(/^data:image\/\w+;base64,/, "");
-    const imgBuffer = Buffer.from(base64Data, "base64");
 
     res.setHeader("Content-Type", "image/jpeg");
-    return res.status(200).send(imgBuffer);
+    return res.status(200).send(Buffer.from(imgRes.data));
 
   } catch (err) {
-    let errMsg = err.message;
-    if (err.response?.data) {
-      try { errMsg = JSON.stringify(err.response.data); } catch(e) {}
-    }
-    return res.status(500).json({ success: false, error: errMsg });
+    return res.status(500).json({ success: false, error: err.message });
   }
 };
