@@ -4,22 +4,30 @@ module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  const { prompt, imageUrl } = req.method === "POST" ? req.body : req.query;
+  // Support both ?prompt=&url= and ?prompt=&imageUrl=
+  const prompt = req.query.prompt;
+  const imageUrl = req.query.url || req.query.imageUrl;
 
   if (!prompt || !imageUrl) {
-    return res.status(400).json({ success: false, error: "prompt and imageUrl are required" });
+    return res.status(400).json({ 
+      success: false, 
+      error: "prompt and url are required" 
+    });
   }
 
   const REPLICATE_KEY = process.env.REPLICATE_API_KEY;
 
   try {
-    // Flux Kontext Pro - exact image editing
+    const decodedImage = decodeURIComponent(imageUrl);
+    const decodedPrompt = decodeURIComponent(prompt);
+
+    // Start Flux Kontext prediction
     const startRes = await axios.post(
       "https://api.replicate.com/v1/models/black-forest-labs/flux-kontext-pro/predictions",
       {
         input: {
-          prompt: prompt,
-          input_image: imageUrl,
+          prompt: decodedPrompt,
+          input_image: decodedImage,
           output_format: "jpg",
           safety_tolerance: 6
         }
@@ -38,17 +46,14 @@ module.exports = async function handler(req, res) {
     const output = startRes.data?.output;
     resultUrl = Array.isArray(output) ? output[0] : output;
 
-    // Poll if not ready yet
+    // Poll for result
     if (!resultUrl) {
       const predId = startRes.data?.id;
       for (let i = 0; i < 40; i++) {
         await new Promise(r => setTimeout(r, 3000));
         const poll = await axios.get(
           `https://api.replicate.com/v1/predictions/${predId}`,
-          {
-            headers: { Authorization: `Bearer ${REPLICATE_KEY}` },
-            timeout: 10000
-          }
+          { headers: { Authorization: `Bearer ${REPLICATE_KEY}` } }
         );
         const status = poll.data?.status;
         if (status === "succeeded") {
@@ -56,22 +61,27 @@ module.exports = async function handler(req, res) {
           resultUrl = Array.isArray(out) ? out[0] : out;
           break;
         } else if (status === "failed" || status === "canceled") {
-          return res.status(500).json({ success: false, error: "Generation failed: " + poll.data?.error });
+          break;
         }
       }
     }
 
     if (!resultUrl) {
-      return res.status(500).json({ success: false, error: "Timed out waiting for image" });
+      return res.status(500).json({ success: false, error: "Generation failed" });
     }
 
-    return res.status(200).json({
-      success: true,
-      data: { imageResponseVo: { url: resultUrl } }
+    // Fetch image and return as direct image (like smfahim.xyz/gedit)
+    const imgRes = await axios.get(resultUrl, {
+      responseType: "arraybuffer",
+      timeout: 60000
     });
 
+    res.setHeader("Content-Type", "image/jpeg");
+    res.setHeader("Content-Disposition", "inline; filename=edited.jpg");
+    return res.status(200).send(Buffer.from(imgRes.data));
+
   } catch (err) {
-    const errMsg = err?.response?.data?.detail || err?.response?.data?.error || err.message;
+    const errMsg = err?.response?.data?.detail || err.message;
     return res.status(500).json({ success: false, error: errMsg });
   }
 };
