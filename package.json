@@ -2,7 +2,8 @@
   "name": "edit-rocky-api",
   "version": "1.0.0",
   "dependencies": {
-    "axios": "^1.6.0"
+    "axios": "^1.6.0",
+    "form-data": "^4.0.0"
   },
   "engines": {
     "node": "20.x"
