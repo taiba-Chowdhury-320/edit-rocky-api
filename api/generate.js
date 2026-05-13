@@ -17,55 +17,53 @@ module.exports = async function handler(req, res) {
   try {
     const decodedImage = decodeURIComponent(imageUrl);
     const decodedPrompt = decodeURIComponent(prompt);
-    const HF_KEY = process.env.HF_API_KEY;
 
-    // Download image as binary
+    // Step 1: Download image as base64
     const imgRes = await axios.get(decodedImage, {
       responseType: "arraybuffer",
       timeout: 30000,
       headers: { "User-Agent": "Mozilla/5.0" }
     });
+    const b64 = Buffer.from(imgRes.data).toString("base64");
+    const mime = imgRes.headers["content-type"] || "image/jpeg";
+    const dataUrl = `data:${mime};base64,${b64}`;
 
-    // Use FormData with binary image
-    const FormData = require("form-data");
-    const form = new FormData();
-    form.append("inputs", decodedPrompt);
-    form.append("image", Buffer.from(imgRes.data), {
-      filename: "image.jpg",
-      contentType: imgRes.headers["content-type"] || "image/jpeg"
-    });
-    form.append("parameters", JSON.stringify({
-      num_inference_steps: 20,
-      image_guidance_scale: 1.5,
-      guidance_scale: 7
-    }));
-
-    const hfRes = await axios.post(
-      "https://api-inference.huggingface.co/models/timbrooks/instruct-pix2pix",
-      form,
+    // Step 2: Call Gradio Space (pix2pix)
+    const gradioRes = await axios.post(
+      "https://fffiloni-instruct-pix2pix.hf.space/run/predict",
       {
-        headers: {
-          ...form.getHeaders(),
-          Authorization: `Bearer ${HF_KEY}`
-        },
-        responseType: "arraybuffer",
+        fn_index: 0,
+        data: [
+          dataUrl,
+          decodedPrompt,
+          7,
+          1.5,
+          20,
+          null
+        ]
+      },
+      {
+        headers: { "Content-Type": "application/json" },
         timeout: 120000
       }
     );
 
-    const ct = hfRes.headers["content-type"] || "";
-    if (ct.includes("application/json") || ct.includes("text")) {
-      const msg = Buffer.from(hfRes.data).toString();
-      return res.status(500).json({ success: false, error: msg });
+    const output = gradioRes.data?.data?.[0];
+    if (!output) {
+      throw new Error("No output from Gradio");
     }
 
+    // output is base64 data URL
+    const base64Data = output.replace(/^data:image\/\w+;base64,/, "");
+    const imgBuffer = Buffer.from(base64Data, "base64");
+
     res.setHeader("Content-Type", "image/jpeg");
-    return res.status(200).send(Buffer.from(hfRes.data));
+    return res.status(200).send(imgBuffer);
 
   } catch (err) {
     let errMsg = err.message;
     if (err.response?.data) {
-      try { errMsg = Buffer.from(err.response.data).toString(); } catch(e) {}
+      try { errMsg = JSON.stringify(err.response.data); } catch(e) {}
     }
     return res.status(500).json({ success: false, error: errMsg });
   }
