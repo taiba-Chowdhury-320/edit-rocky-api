@@ -19,7 +19,7 @@ module.exports = async function handler(req, res) {
     const decodedPrompt = decodeURIComponent(prompt);
     const HF_KEY = process.env.HF_API_KEY;
 
-    // Download image as base64
+    // Download image
     const imgRes = await axios.get(decodedImage, {
       responseType: "arraybuffer",
       timeout: 30000,
@@ -27,29 +27,30 @@ module.exports = async function handler(req, res) {
     });
 
     const base64 = Buffer.from(imgRes.data).toString("base64");
-    const mime = imgRes.headers["content-type"] || "image/jpeg";
 
-    // Call HF - instruct-pix2pix (image editing model)
-    const hfRes = await axios.post(
-      "https://api-inference.huggingface.co/models/timbrooks/instruct-pix2pix",
-      {
-        inputs: decodedPrompt,
+    // Correct HF endpoint for instruct-pix2pix
+    const hfRes = await axios({
+      method: "POST",
+      url: "https://api-inference.huggingface.co/models/timbrooks/instruct-pix2pix",
+      headers: {
+        Authorization: `Bearer ${HF_KEY}`,
+        "Content-Type": "application/json",
+        "x-use-cache": "false"
+      },
+      data: JSON.stringify({
+        inputs: {
+          prompt: decodedPrompt,
+          image: base64
+        },
         parameters: {
-          image: base64,
           num_inference_steps: 20,
           image_guidance_scale: 1.5,
           guidance_scale: 7
         }
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${HF_KEY}`,
-          "Content-Type": "application/json"
-        },
-        responseType: "arraybuffer",
-        timeout: 120000
-      }
-    );
+      }),
+      responseType: "arraybuffer",
+      timeout: 120000
+    });
 
     res.setHeader("Content-Type", "image/jpeg");
     return res.status(200).send(Buffer.from(hfRes.data));
