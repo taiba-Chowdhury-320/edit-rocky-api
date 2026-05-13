@@ -17,28 +17,56 @@ module.exports = async function handler(req, res) {
   try {
     const decodedImage = decodeURIComponent(imageUrl);
     const decodedPrompt = decodeURIComponent(prompt);
+    const HF_KEY = process.env.HF_API_KEY;
 
-    // Use Pollinations with image reference in prompt
-    const fullPrompt = `${decodedPrompt}. Keep the same person/subject from the reference image. Style transfer only.`;
-    const encodedPrompt = encodeURIComponent(fullPrompt);
-    const seed = Math.floor(Math.random() * 999999);
-
-    const resultUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&seed=${seed}&nologo=true&enhance=false&model=flux`;
-
-    const imgRes = await axios.get(resultUrl, {
+    // Download image as binary
+    const imgRes = await axios.get(decodedImage, {
       responseType: "arraybuffer",
-      timeout: 90000,
+      timeout: 30000,
       headers: { "User-Agent": "Mozilla/5.0" }
     });
 
-    if (!imgRes.data || imgRes.data.byteLength < 1000) {
-      throw new Error("Empty image response");
+    // Use FormData with binary image
+    const FormData = require("form-data");
+    const form = new FormData();
+    form.append("inputs", decodedPrompt);
+    form.append("image", Buffer.from(imgRes.data), {
+      filename: "image.jpg",
+      contentType: imgRes.headers["content-type"] || "image/jpeg"
+    });
+    form.append("parameters", JSON.stringify({
+      num_inference_steps: 20,
+      image_guidance_scale: 1.5,
+      guidance_scale: 7
+    }));
+
+    const hfRes = await axios.post(
+      "https://api-inference.huggingface.co/models/timbrooks/instruct-pix2pix",
+      form,
+      {
+        headers: {
+          ...form.getHeaders(),
+          Authorization: `Bearer ${HF_KEY}`
+        },
+        responseType: "arraybuffer",
+        timeout: 120000
+      }
+    );
+
+    const ct = hfRes.headers["content-type"] || "";
+    if (ct.includes("application/json") || ct.includes("text")) {
+      const msg = Buffer.from(hfRes.data).toString();
+      return res.status(500).json({ success: false, error: msg });
     }
 
     res.setHeader("Content-Type", "image/jpeg");
-    return res.status(200).send(Buffer.from(imgRes.data));
+    return res.status(200).send(Buffer.from(hfRes.data));
 
   } catch (err) {
-    return res.status(500).json({ success: false, error: err.message });
+    let errMsg = err.message;
+    if (err.response?.data) {
+      try { errMsg = Buffer.from(err.response.data).toString(); } catch(e) {}
+    }
+    return res.status(500).json({ success: false, error: errMsg });
   }
 };
