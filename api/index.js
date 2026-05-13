@@ -1,364 +1,489 @@
 module.exports = async function handler(req, res) {
   res.setHeader("Content-Type", "text/html");
-  res.status(200).send(`
-<!DOCTYPE html>
+  res.status(200).send(`<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Edit Rocky API</title>
+  <title>Edit Rocky API — by Rocky Chowdhury</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600&display=swap');
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --green: #00ff88;
+      --blue: #00bfff;
+      --purple: #a855f7;
+      --pink: #ff006e;
+      --dark: #050508;
+    }
 
     body {
-      min-height: 100vh;
-      background: #000;
-      font-family: 'Inter', sans-serif;
-      overflow-x: hidden;
+      background: var(--dark);
       color: #fff;
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
     }
 
-    /* Animated background */
-    .bg {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      background: radial-gradient(ellipse at 20% 50%, #0d2b1a 0%, transparent 50%),
-                  radial-gradient(ellipse at 80% 20%, #001a2e 0%, transparent 50%),
-                  radial-gradient(ellipse at 50% 80%, #1a0a2e 0%, transparent 50%),
-                  #000;
-    }
-
-    /* Grid lines */
-    .grid {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      background-image:
-        linear-gradient(rgba(0,255,136,0.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,255,136,0.04) 1px, transparent 1px);
-      background-size: 50px 50px;
-      animation: gridMove 20s linear infinite;
-    }
-    @keyframes gridMove {
-      0% { transform: translateY(0); }
-      100% { transform: translateY(50px); }
-    }
-
-    /* Floating orbs */
-    .orb {
-      position: fixed;
-      border-radius: 50%;
-      filter: blur(80px);
-      animation: float 8s ease-in-out infinite;
-      z-index: 0;
-    }
-    .orb1 {
-      width: 400px; height: 400px;
-      background: rgba(0, 255, 136, 0.08);
-      top: -100px; left: -100px;
-      animation-delay: 0s;
-    }
-    .orb2 {
-      width: 350px; height: 350px;
-      background: rgba(0, 191, 255, 0.08);
-      bottom: -100px; right: -100px;
-      animation-delay: 3s;
-    }
-    .orb3 {
-      width: 300px; height: 300px;
-      background: rgba(138, 43, 226, 0.06);
-      top: 50%; left: 50%;
-      animation-delay: 6s;
-    }
-    @keyframes float {
-      0%, 100% { transform: translateY(0) scale(1); }
-      50% { transform: translateY(-30px) scale(1.1); }
-    }
-
-    /* Particles */
-    .particles {
+    /* ── Animated background ── */
+    .bg-wrap {
       position: fixed;
       inset: 0;
       z-index: 0;
       overflow: hidden;
     }
-    .particle {
+    .bg-gradient {
       position: absolute;
-      width: 2px; height: 2px;
-      background: #00ff88;
-      border-radius: 50%;
-      animation: rise linear infinite;
-      opacity: 0;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 10% 20%, rgba(0,255,136,.07) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 80% at 90% 80%, rgba(0,191,255,.07) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 50% at 50% 50%, rgba(168,85,247,.05) 0%, transparent 70%);
     }
-    @keyframes rise {
-      0% { transform: translateY(100vh) translateX(0); opacity: 0; }
-      10% { opacity: 1; }
-      90% { opacity: 1; }
-      100% { transform: translateY(-10px) translateX(30px); opacity: 0; }
+    .grid-lines {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,255,136,.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,136,.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      animation: gridScroll 25s linear infinite;
+    }
+    @keyframes gridScroll { to { transform: translateY(60px); } }
+
+    /* Floating orbs */
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(90px);
+      animation: orbFloat ease-in-out infinite;
+    }
+    .orb1 { width:500px;height:500px;background:rgba(0,255,136,.06);top:-150px;left:-150px;animation-duration:9s; }
+    .orb2 { width:400px;height:400px;background:rgba(0,191,255,.06);bottom:-100px;right:-100px;animation-duration:12s;animation-delay:3s; }
+    .orb3 { width:300px;height:300px;background:rgba(168,85,247,.05);top:40%;left:40%;animation-duration:15s;animation-delay:6s; }
+    @keyframes orbFloat {
+      0%,100% { transform: translate(0,0) scale(1); }
+      50% { transform: translate(20px,-30px) scale(1.08); }
     }
 
-    /* Main content */
-    .wrapper {
+    /* Particles */
+    #particles { position:fixed;inset:0;z-index:0;pointer-events:none; }
+    .p {
+      position:absolute;
+      border-radius:50%;
+      animation: rise linear infinite;
+      opacity:0;
+    }
+    @keyframes rise {
+      0%   { transform:translateY(100vh);opacity:0; }
+      10%  { opacity:.8; }
+      90%  { opacity:.8; }
+      100% { transform:translateY(-20px) translateX(20px);opacity:0; }
+    }
+
+    /* ── Layout ── */
+    .page {
       position: relative;
       z-index: 10;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 60px 20px;
+      padding: 0 20px 80px;
     }
 
-    /* Header */
-    .badge {
-      background: linear-gradient(135deg, rgba(0,255,136,0.15), rgba(0,191,255,0.15));
-      border: 1px solid rgba(0,255,136,0.4);
+    /* ── NAV ── */
+    nav {
+      width: 100%;
+      max-width: 1100px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 28px 0;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      margin-bottom: 70px;
+    }
+    .nav-logo {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 17px;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--green), var(--blue));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: 1px;
+    }
+    .nav-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0,255,136,.08);
+      border: 1px solid rgba(0,255,136,.25);
+      border-radius: 50px;
+      padding: 7px 18px;
+      font-size: 13px;
+      color: var(--green);
+    }
+    .dot {
+      width: 8px; height: 8px;
+      background: var(--green);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--green);
+      animation: blink 1.5s infinite;
+    }
+    @keyframes blink {
+      0%,100% { opacity:1; box-shadow:0 0 6px var(--green); }
+      50%      { opacity:.4; box-shadow:0 0 18px var(--green); }
+    }
+
+    /* ── HERO ── */
+    .hero { text-align: center; max-width: 800px; }
+
+    .hero-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, rgba(0,255,136,.12), rgba(0,191,255,.12));
+      border: 1px solid rgba(0,255,136,.35);
       border-radius: 50px;
       padding: 8px 24px;
-      font-size: 13px;
-      color: #00ff88;
-      letter-spacing: 2px;
+      font-size: 12px;
+      color: var(--green);
+      letter-spacing: 3px;
       text-transform: uppercase;
-      margin-bottom: 30px;
-      backdrop-filter: blur(10px);
+      margin-bottom: 28px;
     }
 
     h1 {
       font-family: 'Orbitron', sans-serif;
-      font-size: clamp(36px, 8vw, 72px);
+      font-size: clamp(40px, 9vw, 82px);
       font-weight: 900;
-      background: linear-gradient(135deg, #00ff88 0%, #00bfff 50%, #a855f7 100%);
+      line-height: 1.05;
+      background: linear-gradient(135deg, var(--green) 0%, var(--blue) 50%, var(--purple) 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      text-align: center;
-      line-height: 1.1;
-      margin-bottom: 15px;
-      text-shadow: none;
-      animation: glow 3s ease-in-out infinite;
+      animation: shimmer 4s ease-in-out infinite;
+      margin-bottom: 16px;
     }
-    @keyframes glow {
-      0%, 100% { filter: brightness(1); }
-      50% { filter: brightness(1.2); }
+    @keyframes shimmer {
+      0%,100% { filter: brightness(1); }
+      50%      { filter: brightness(1.25) drop-shadow(0 0 20px rgba(0,255,136,.3)); }
     }
 
-    .subtitle {
-      color: #888;
+    .hero-sub {
       font-size: 18px;
-      margin-bottom: 60px;
-      letter-spacing: 1px;
+      color: #777;
+      margin-bottom: 12px;
+      letter-spacing: .5px;
     }
-    .subtitle span {
-      color: #00ff88;
-    }
+    .hero-sub span { color: var(--blue); }
 
-    /* Status bar */
-    .status-bar {
-      display: flex;
+    /* Author line */
+    .author-line {
+      display: inline-flex;
       align-items: center;
       gap: 10px;
-      background: rgba(0,255,136,0.08);
-      border: 1px solid rgba(0,255,136,0.3);
-      border-radius: 50px;
-      padding: 12px 30px;
-      margin-bottom: 60px;
-      backdrop-filter: blur(10px);
+      margin-bottom: 48px;
+      font-size: 15px;
+      color: #555;
     }
-    .dot {
-      width: 10px; height: 10px;
-      background: #00ff88;
-      border-radius: 50%;
-      box-shadow: 0 0 10px #00ff88;
-      animation: pulse 1.5s infinite;
+    .author-line .name {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--pink), var(--purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
-    @keyframes pulse {
-      0%, 100% { box-shadow: 0 0 5px #00ff88; transform: scale(1); }
-      50% { box-shadow: 0 0 20px #00ff88, 0 0 40px #00ff88; transform: scale(1.2); }
-    }
-    .status-text { color: #00ff88; font-size: 15px; font-weight: 600; }
+    .author-line .divider { color: #333; }
 
-    /* Cards grid */
+    /* ── STATS ── */
+    .stats {
+      display: flex;
+      gap: 30px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 70px;
+    }
+    .stat {
+      text-align: center;
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 16px;
+      padding: 22px 36px;
+      min-width: 130px;
+      transition: border-color .3s, transform .3s;
+    }
+    .stat:hover { border-color: rgba(0,255,136,.3); transform: translateY(-4px); }
+    .stat-num {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--green);
+      margin-bottom: 4px;
+    }
+    .stat-label { font-size: 12px; color: #555; text-transform: uppercase; letter-spacing: 1px; }
+
+    /* ── CARDS ── */
+    .section-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 13px;
+      color: #444;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
     .cards {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 20px;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 18px;
       width: 100%;
-      max-width: 900px;
-      margin-bottom: 40px;
+      max-width: 1100px;
+      margin-bottom: 30px;
     }
 
     .card {
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.07);
       border-radius: 20px;
-      padding: 30px;
-      backdrop-filter: blur(20px);
-      transition: all 0.3s ease;
+      padding: 28px;
+      transition: all .35s ease;
       position: relative;
       overflow: hidden;
     }
-    .card::before {
+    .card::after {
       content: '';
       position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, #00ff88, transparent);
+      inset: 0;
+      background: linear-gradient(135deg, rgba(0,255,136,.03), transparent);
       opacity: 0;
-      transition: opacity 0.3s;
+      transition: opacity .35s;
     }
-    .card:hover {
-      transform: translateY(-5px);
-      border-color: rgba(0,255,136,0.3);
-      background: rgba(0,255,136,0.05);
-    }
-    .card:hover::before { opacity: 1; }
-
+    .card:hover { transform: translateY(-6px); border-color: rgba(0,255,136,.25); }
+    .card:hover::after { opacity: 1; }
+    .card-top { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
     .card-icon {
-      font-size: 32px;
-      margin-bottom: 15px;
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      background: rgba(0,255,136,.08);
+      border: 1px solid rgba(0,255,136,.15);
     }
-    .card h3 {
-      color: #00ff88;
-      font-size: 13px;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      margin-bottom: 12px;
-    }
+    .card-title { font-size: 13px; color: var(--green); text-transform: uppercase; letter-spacing: 2px; }
     .card code {
-      background: rgba(0,0,0,0.5);
-      border: 1px solid rgba(0,255,136,0.2);
-      padding: 12px 15px;
+      background: rgba(0,0,0,.5);
+      border: 1px solid rgba(0,255,136,.15);
       border-radius: 10px;
+      padding: 12px 14px;
       display: block;
       font-size: 13px;
-      color: #00bfff;
+      color: var(--blue);
+      line-height: 1.9;
       word-break: break-all;
-      line-height: 1.8;
     }
 
-    /* Big URL box */
+    /* ── URL BOX ── */
     .url-box {
       width: 100%;
-      max-width: 900px;
-      background: rgba(0,191,255,0.05);
-      border: 1px solid rgba(0,191,255,0.3);
+      max-width: 1100px;
+      background: rgba(0,191,255,.04);
+      border: 1px solid rgba(0,191,255,.2);
       border-radius: 20px;
-      padding: 30px;
-      margin-bottom: 40px;
+      padding: 32px;
+      margin-bottom: 30px;
       text-align: center;
     }
-    .url-box h3 {
-      color: #00bfff;
-      font-size: 13px;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      margin-bottom: 15px;
-    }
+    .url-box h3 { font-size: 12px; color: var(--blue); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 16px; }
     .url-box code {
-      font-size: 14px;
+      font-size: 15px;
       color: #fff;
-      background: rgba(0,0,0,0.4);
-      padding: 15px 20px;
-      border-radius: 10px;
-      display: block;
+      background: rgba(0,0,0,.4);
+      padding: 16px 24px;
+      border-radius: 12px;
+      display: inline-block;
+      border: 1px solid rgba(0,191,255,.15);
       word-break: break-all;
-      border: 1px solid rgba(0,191,255,0.2);
     }
 
-    /* Footer */
-    .footer {
-      margin-top: 40px;
-      text-align: center;
-      color: #444;
-      font-size: 14px;
+    /* ── EXAMPLE BOX ── */
+    .example-box {
+      width: 100%;
+      max-width: 1100px;
+      background: rgba(168,85,247,.04);
+      border: 1px solid rgba(168,85,247,.2);
+      border-radius: 20px;
+      padding: 32px;
+      margin-bottom: 60px;
     }
-    .footer span { color: #00ff88; }
+    .example-box h3 { font-size: 12px; color: var(--purple); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 20px; }
+    .examples { display: flex; flex-direction: column; gap: 10px; }
+    .ex {
+      background: rgba(0,0,0,.3);
+      border: 1px solid rgba(168,85,247,.1);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 13px;
+      color: #aaa;
+      font-family: monospace;
+    }
+    .ex span { color: var(--purple); }
+
+    /* ── FOOTER ── */
+    footer {
+      width: 100%;
+      max-width: 1100px;
+      border-top: 1px solid rgba(255,255,255,.05);
+      padding-top: 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      text-align: center;
+    }
+    .footer-name {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 22px;
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--pink), var(--purple), var(--blue));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .footer-sub { font-size: 13px; color: #444; }
+    .footer-sub span { color: var(--green); }
   </style>
 </head>
 <body>
 
-  <div class="bg"></div>
-  <div class="grid"></div>
-
+<div class="bg-wrap">
+  <div class="bg-gradient"></div>
+  <div class="grid-lines"></div>
   <div class="orb orb1"></div>
   <div class="orb orb2"></div>
   <div class="orb orb3"></div>
+</div>
 
-  <!-- Particles -->
-  <div class="particles" id="particles"></div>
+<div id="particles"></div>
 
-  <div class="wrapper">
-    <div class="badge">⚡ Edit Rocky API v1.0</div>
+<div class="page">
 
-    <h1>Edit Rocky API</h1>
-    <p class="subtitle">Seedream V4 Image Edit — <span>Powered by AI</span></p>
+  <!-- NAV -->
+  <nav>
+    <div class="nav-logo">⚡ EDIT ROCKY API</div>
+    <div class="nav-status"><div class="dot"></div> All Systems Online</div>
+  </nav>
 
-    <div class="status-bar">
-      <div class="dot"></div>
-      <span class="status-text">All Systems Operational</span>
-    </div>
-
-    <div class="cards">
-      <div class="card">
-        <div class="card-icon">📡</div>
-        <h3>Endpoint</h3>
-        <code>GET /generate?prompt=...&imageUrl=...</code>
-      </div>
-
-      <div class="card">
-        <div class="card-icon">📦</div>
-        <h3>Parameters</h3>
-        <code>
-          prompt — required<br>
-          imageUrl — required<br>
-          model — optional
-        </code>
-      </div>
-
-      <div class="card">
-        <div class="card-icon">🤖</div>
-        <h3>Model</h3>
-        <code>Seedream V4 Edit<br>AI Image Editing<br>Max timeout: 120s</code>
-      </div>
-
-      <div class="card">
-        <div class="card-icon">🔓</div>
-        <h3>Access</h3>
-        <code>
-          Method: GET / POST<br>
-          Auth: None required<br>
-          CORS: Enabled ✓
-        </code>
-      </div>
-    </div>
-
-    <div class="url-box">
-      <h3>🌐 Base URL</h3>
-      <code>https://edit-rocky-api.vercel.app/generate</code>
-    </div>
-
-    <div class="footer">
-      Made with ❤️ by <span>Rocky</span> • Edit Rocky API • Powered by Vercel
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-badge">🚀 Edit Rocky API &nbsp;•&nbsp; v2.0</div>
+    <h1>Edit Rocky<br>API</h1>
+    <p class="hero-sub">AI Image Editing — <span>Powered by Hugging Face</span></p>
+    <div class="author-line">
+      <span>Created by</span>
+      <span class="divider">|</span>
+      <span class="name">Rocky Chowdhury</span>
     </div>
   </div>
 
-  <script>
-    // Generate particles
-    const container = document.getElementById('particles');
-    for (let i = 0; i < 40; i++) {
-      const p = document.createElement('div');
-      p.className = 'particle';
-      p.style.left = Math.random() * 100 + 'vw';
-      p.style.animationDuration = (Math.random() * 10 + 8) + 's';
-      p.style.animationDelay = (Math.random() * 10) + 's';
-      p.style.width = p.style.height = (Math.random() * 3 + 1) + 'px';
-      if (Math.random() > 0.5) p.style.background = '#00bfff';
-      container.appendChild(p);
-    }
-  </script>
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat"><div class="stat-num">∞</div><div class="stat-label">Requests</div></div>
+    <div class="stat"><div class="stat-num">AI</div><div class="stat-label">Powered</div></div>
+    <div class="stat"><div class="stat-num">0$</div><div class="stat-label">Cost</div></div>
+    <div class="stat"><div class="stat-num">24/7</div><div class="stat-label">Uptime</div></div>
+  </div>
 
+  <!-- CARDS -->
+  <p class="section-title">API Reference</p>
+  <div class="cards">
+    <div class="card">
+      <div class="card-top">
+        <div class="card-icon">📡</div>
+        <div class="card-title">Endpoint</div>
+      </div>
+      <code>GET /generate?prompt=...&url=...</code>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <div class="card-icon">📦</div>
+        <div class="card-title">Parameters</div>
+      </div>
+      <code>
+        prompt — required<br>
+        url — required (image link)<br>
+        imageUrl — alternative param
+      </code>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <div class="card-icon">🤖</div>
+        <div class="card-title">Model</div>
+      </div>
+      <code>
+        instruct-pix2pix<br>
+        Image-to-Image AI<br>
+        Timeout: 120s
+      </code>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <div class="card-icon">🔓</div>
+        <div class="card-title">Access</div>
+      </div>
+      <code>
+        Method: GET / POST<br>
+        Auth: None required<br>
+        CORS: Enabled ✓
+      </code>
+    </div>
+  </div>
+
+  <!-- URL BOX -->
+  <div class="url-box">
+    <h3>🌐 Base URL</h3>
+    <code>https://edit-rocky-api-ttmy.vercel.app/generate</code>
+  </div>
+
+  <!-- EXAMPLES -->
+  <div class="example-box">
+    <h3>💡 Example Prompts</h3>
+    <div class="examples">
+      <div class="ex">?prompt=<span>make it cartoon</span>&url=IMAGE_URL</div>
+      <div class="ex">?prompt=<span>add a cat</span>&url=IMAGE_URL</div>
+      <div class="ex">?prompt=<span>change background to beach</span>&url=IMAGE_URL</div>
+      <div class="ex">?prompt=<span>make it black and white</span>&url=IMAGE_URL</div>
+      <div class="ex">?prompt=<span>add snow effect</span>&url=IMAGE_URL</div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-name">Rocky Chowdhury</div>
+    <div class="footer-sub">Edit Rocky API • Hosted on <span>Vercel</span> • Powered by <span>Hugging Face AI</span></div>
+  </footer>
+
+</div>
+
+<script>
+  const c = document.getElementById('particles');
+  for (let i = 0; i < 50; i++) {
+    const p = document.createElement('div');
+    p.className = 'p';
+    const size = Math.random() * 3 + 1;
+    p.style.cssText = [
+      'left:' + Math.random() * 100 + 'vw',
+      'width:' + size + 'px',
+      'height:' + size + 'px',
+      'animation-duration:' + (Math.random() * 12 + 8) + 's',
+      'animation-delay:' + (Math.random() * 12) + 's',
+      'background:' + (Math.random() > .5 ? '#00ff88' : '#00bfff')
+    ].join(';');
+    c.appendChild(p);
+  }
+</script>
 </body>
-</html>
-  `);
+</html>`);
 };
