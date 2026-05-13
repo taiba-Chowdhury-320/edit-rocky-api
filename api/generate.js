@@ -17,49 +17,28 @@ module.exports = async function handler(req, res) {
   try {
     const decodedImage = decodeURIComponent(imageUrl);
     const decodedPrompt = decodeURIComponent(prompt);
-    const HF_KEY = process.env.HF_API_KEY;
 
-    // Download image
-    const imgRes = await axios.get(decodedImage, {
+    // Use Pollinations with image reference in prompt
+    const fullPrompt = `${decodedPrompt}. Keep the same person/subject from the reference image. Style transfer only.`;
+    const encodedPrompt = encodeURIComponent(fullPrompt);
+    const seed = Math.floor(Math.random() * 999999);
+
+    const resultUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&seed=${seed}&nologo=true&enhance=false&model=flux`;
+
+    const imgRes = await axios.get(resultUrl, {
       responseType: "arraybuffer",
-      timeout: 30000,
+      timeout: 90000,
       headers: { "User-Agent": "Mozilla/5.0" }
     });
 
-    const base64 = Buffer.from(imgRes.data).toString("base64");
-
-    // Correct HF endpoint for instruct-pix2pix
-    const hfRes = await axios({
-      method: "POST",
-      url: "https://api-inference.huggingface.co/models/timbrooks/instruct-pix2pix",
-      headers: {
-        Authorization: `Bearer ${HF_KEY}`,
-        "Content-Type": "application/json",
-        "x-use-cache": "false"
-      },
-      data: JSON.stringify({
-        inputs: {
-          prompt: decodedPrompt,
-          image: base64
-        },
-        parameters: {
-          num_inference_steps: 20,
-          image_guidance_scale: 1.5,
-          guidance_scale: 7
-        }
-      }),
-      responseType: "arraybuffer",
-      timeout: 120000
-    });
+    if (!imgRes.data || imgRes.data.byteLength < 1000) {
+      throw new Error("Empty image response");
+    }
 
     res.setHeader("Content-Type", "image/jpeg");
-    return res.status(200).send(Buffer.from(hfRes.data));
+    return res.status(200).send(Buffer.from(imgRes.data));
 
   } catch (err) {
-    let errMsg = err.message;
-    if (err.response?.data) {
-      try { errMsg = Buffer.from(err.response.data).toString(); } catch(e) {}
-    }
-    return res.status(500).json({ success: false, error: errMsg });
+    return res.status(500).json({ success: false, error: err.message });
   }
 };
